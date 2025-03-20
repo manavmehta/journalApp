@@ -2,16 +2,15 @@ package com.manavmehta.journalApp.controller;
 
 import com.manavmehta.journalApp.entity.JournalEntry;
 import com.manavmehta.journalApp.service.JournalEntryService;
+import lombok.extern.slf4j.Slf4j;
+import org.bson.types.ObjectId;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.http.MediaType;
 import org.springframework.web.bind.annotation.*;
 
 import java.time.Instant;
-import java.util.ArrayList;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
+import java.util.*;
 
+@Slf4j
 @RestController
 @RequestMapping("/journal")
 public class JournalController {
@@ -21,12 +20,12 @@ public class JournalController {
 
     @GetMapping()
     public List<JournalEntry> getAllEntries() {
-        return service.getAllEntries();
+        return service.findAll();
     }
 
     @GetMapping("{id}")
-    public JournalEntry getEntryById(@PathVariable Long id) {
-        return null;
+    public Optional<JournalEntry> getEntryById(@PathVariable ObjectId id) {
+        return service.findById(id);
     }
 
     @PostMapping(value = "")
@@ -37,18 +36,26 @@ public class JournalController {
     }
 
     @PutMapping(value = "{id}")
-    public boolean updateEntryById(@PathVariable Long id, @RequestBody JournalEntry entry) {
-        if (entry.getEntryDate() == null){
-            entry.setEntryDate(Instant.now());
+    public boolean updateEntryById(@PathVariable ObjectId id, @RequestBody JournalEntry newEntry) {
+        var entry = service.findById(id).get();
+        if (newEntry != null && newEntry.getTitle() != null && !newEntry.getTitle().isEmpty()) {
+            entry.setTitle(newEntry.getTitle());
         }
-//        this.entries.put(id, entry);
+        if (newEntry != null && newEntry.getContent() != null && !newEntry.getContent().isEmpty()) {
+            entry.setContent(newEntry.getContent());
+        }
+        service.saveEntry(entry);
         return true;
     }
 
     @DeleteMapping("{id}")
-    public JournalEntry deleteEntryById(@PathVariable Long id) {
-//        return this.entries.remove(id);
-        return null;
-
+    public boolean deleteEntryById(@PathVariable ObjectId id) {
+        try {
+            service.deleteById(id);
+            return true;
+        } catch (Exception e) {
+            log.error("Error deleting entry ", e);
+            return false;
+        }
     }
 }
